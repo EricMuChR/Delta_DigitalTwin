@@ -1,0 +1,93 @@
+# ===================================================================
+# MASTER CONFIGURATION FILE
+# This file is the single point of control for the entire application.
+# ===================================================================
+
+# 1. 全局运行设置 (Global Run Settings)
+run_settings:
+  # 'identify', 'generalize', 'validate', 'simulate', 'deploy'
+  # 'specialize_and_map': (新) 从少量数据一键生成专机误差地图
+  mode: "simulate"
+
+# 2. 文件路径设置 (File Paths)
+paths:
+  identification_data: "data/sample_measurements.csv"
+  validation_data: "data/sample_validation.csv"
+  identified_params_output: "results/identified_params.npy"
+  compensation_model_output: "results/compensation_model.pkl"
+  meta_model_output: "results/meta_compensation_model.pkl"
+  validation_plot_output: "results/validation_results.png"
+  sim_ground_truth_params: "results/sim_ground_truth_params.npy"
+  sim_identified_params: "results/sim_identified_params.npy"
+
+# 3. 机器人名义结构参数 (Robot Nominal Parameters)
+robot_parameters:
+  fixed_platform_radius: 0.215
+  moving_platform_radius: 0.060
+  active_arm_length: 0.405
+  passive_arm_length: 0.930
+  moving_platform_hinge_spacing: 0.093
+  tool_offset: [0.0, 0.0, 0.041]
+
+# 4. 阶段一: 参数辨识算法设置 (Stage One: Identification Settings)
+stage_one_settings:
+  global_search:
+    population_size: 48
+    generations: 150
+    param_lower_bound: -0.005
+    param_upper_bound: 0.005
+  local_finetune:
+    adam:
+      learning_rate: 0.0005
+      max_iterations: 1000
+      convergence_grad_norm: 1.0e-5
+    lbfgs:
+      max_iterations: 500
+      convergence_gtol: 1.0e-9
+
+# 5. 阶段二: 快速泛化模型生成设置 (Stage Two: Generalization Settings)
+stage_two_settings:
+  generalization_mode: "meta" # 推荐使用 meta 模式以支持专机化
+  generalization_grid_density: 
+  workspace_limits: [-0.55, 0.55, -0.55, 0.55, -0.99, -0.71]
+  mlp:
+    hidden_layers: 
+    max_iter: 500
+  meta_learning:
+    network_architecture: 
+    inner_lr: 0.01
+    meta_lr: 0.001
+    inner_steps: 5
+    n_tasks: 50
+    n_samples_per_task: 10
+    meta_epochs: 100
+
+# 6. 闭环仿真验证设置 (Simulation Settings)
+simulation_settings:
+  num_points: 200
+  workspace_limits: [-0.5, 0.5, -0.5, 0.5, -0.9, -0.7]
+  noise_mean: 0.000015
+  noise_std: 0.000006
+  ground_truth_params:
+
+# 7. 模型部署设置 (Deployment Settings)
+deployment_settings:
+  # 'online_accuracy', 'offline_pointwise', 'offline_trajectory', 'package_export', 'map_export'
+  strategy: "package_export"
+  
+  package_export_settings:
+    export_directory: "deployable_compensator"
+    model_filename: "model.pkl"
+    
+  map_export_settings:
+    export_directory: "deployable_map"
+    map_filename: "error_map.npz"
+    map_grid_density: 
+
+# 8. 一键式专机化与地图生成设置
+specialize_and_map_settings:
+  source_meta_model_path: "results/meta_compensation_model.pkl"
+  adaptation_data_path: "data/sample_measurements.csv"
+  export_directory: "deployable_map_specialized"
+  map_filename: "error_map.npz"
+  map_grid_density:

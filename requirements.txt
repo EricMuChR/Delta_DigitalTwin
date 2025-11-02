@@ -1,0 +1,11 @@
+jax
+jaxlib
+numpy
+PyYAML
+matplotlib
+scikit-learn
+tqdm
+deap
+cma
+optax
+scipy
