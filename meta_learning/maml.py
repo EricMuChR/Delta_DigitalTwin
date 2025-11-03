@@ -2,9 +2,11 @@ import jax
 import jax.numpy as jnp
 import optax
 from tqdm import tqdm
+import os
 
 class MAMLRegressor:
-    def __init__(self, settings):
+    def __init__(self, settings, device='cpu'):
+        self.configure_device(device)
         self.settings = settings
         self.meta_lr = settings['meta_lr']
         self.inner_lr = settings['inner_lr']
@@ -13,6 +15,28 @@ class MAMLRegressor:
         self.optimizer = optax.adam(learning_rate=self.meta_lr)
         self.opt_state = self.optimizer.init(self.meta_params)
         print("MAML Regressor 初始化，内循环引擎为Adam。")
+
+    def configure_device(self, device):
+        """配置 JAX 设备"""
+        if device == "cpu":
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''
+            jax.config.update('jax_platform_name', 'cpu')
+            print(f"MAML 设备配置: CPU")
+        elif device == "cuda":
+            try:
+                gpu_devices = jax.devices('gpu')
+                if len(gpu_devices) > 0:
+                    jax.config.update('jax_platform_name', 'gpu')
+                    print(f"MAML 设备配置: GPU - {gpu_devices[0]}")
+                else:
+                    print("警告: MAML 未检测到 GPU 设备，回退到 CPU")
+                    jax.config.update('jax_platform_name', 'cpu')
+            except RuntimeError:
+                print("警告: MAML GPU 初始化失败，回退到 CPU")
+                jax.config.update('jax_platform_name', 'cpu')
+        
+        print(f"MAML 当前后端: {jax.default_backend()}")
+        self.device = device
 
     def _init_params(self):
         layer_sizes = self.settings['network_architecture']

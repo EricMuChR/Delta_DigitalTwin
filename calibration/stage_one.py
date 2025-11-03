@@ -5,6 +5,43 @@ from tqdm import tqdm
 import cma
 import optax
 from scipy.optimize import minimize
+import os
+
+def configure_jax_device(device):
+    """配置 JAX 使用的设备"""
+    if device == "cpu":
+        # 强制 JAX 使用 CPU
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        jax.config.update('jax_platform_name', 'cpu')
+        print("JAX 设备配置: CPU")
+    elif device == "cuda":
+        # 首先检查是否安装了 GPU 版本的 JAX
+        try:
+            gpu_devices = jax.devices('gpu')
+            if len(gpu_devices) > 0:
+                jax.config.update('jax_platform_name', 'gpu')
+                print(f"JAX 设备配置: GPU - {gpu_devices[0]}")
+                print(f"可用的 GPU 设备: {gpu_devices}")
+            else:
+                print("警告: 未检测到 GPU 设备")
+                print("可能原因:")
+                print("  1. 未安装 jax[cuda] 版本，请运行: pip install jax[cuda11_pip] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html")
+                print("  2. CUDA 驱动未正确安装")
+                print("  3. GPU 不可用或被其他程序占用")
+                print("回退到 CPU 模式")
+                jax.config.update('jax_platform_name', 'cpu')
+        except RuntimeError as e:
+            print(f"GPU 初始化失败: {e}")
+            print("这通常意味着您安装的是 CPU 版本的 JAX")
+            print("要使用 GPU，请安装: pip install --upgrade jax[cuda11_pip] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html")
+            print("回退到 CPU 模式")
+            jax.config.update('jax_platform_name', 'cpu')
+    else:
+        print(f"未知设备类型: {device}，使用默认配置")
+    
+    # 打印当前实际使用的设备
+    print(f"当前 JAX 后端: {jax.default_backend()}")
+    print(f"可用设备列表: {jax.devices()}")
 
 def get_loss_function(robot, cmd_pos_jax, meas_pos_jax):
     meas_error = meas_pos_jax - cmd_pos_jax
@@ -92,7 +129,10 @@ def local_fine_lbfgs(loss_fn, initial_params, settings):
     print(f"L-BFGS-B 精调完成，最终损失: {result.fun:.6f}")
     return final_params
 
-def identify_parameters(robot, cmd_pos, meas_pos, settings):
+def identify_parameters(robot, cmd_pos, meas_pos, settings, device='cpu'):
+    # 配置设备
+    configure_jax_device(device)
+    
     cmd_pos_jax = jnp.array(cmd_pos)
     meas_pos_jax = jnp.array(meas_pos)
     loss_fn = get_loss_function(robot, cmd_pos_jax, meas_pos_jax)

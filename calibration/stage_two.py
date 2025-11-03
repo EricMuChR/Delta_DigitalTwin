@@ -5,8 +5,9 @@ from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 from meta_learning.maml import MAMLRegressor
 
-def generate_compensation_model(robot, identified_params, settings):
+def generate_compensation_model(robot, identified_params, settings, device='cpu'):
     print("开始生成标准MLP补偿模型...")
+    print(f"使用设备: {device.upper()}")
     
     ws = settings['workspace_limits']
     grid_density = settings['generalization_grid_density']
@@ -37,11 +38,13 @@ def generate_compensation_model(robot, identified_params, settings):
     print("MLP模型训练完成。")
     return pipeline
 
-def generate_meta_compensation_model(robot, identified_params, config):
+def generate_meta_compensation_model(robot, identified_params, config, device='cpu'):
     print("开始生成元学习(MAML)补偿模型...")
+    print(f"使用设备: {device.upper()}")
     
     maml_settings = config['stage_two_settings']['meta_learning']
-    model = MAMLRegressor(settings=maml_settings)
+    # 将设备信息传递给 MAML 模型
+    model = MAMLRegressor(settings=maml_settings, device=device)
     
     print("正在生成元学习任务...")
     tasks = []

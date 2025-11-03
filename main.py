@@ -89,6 +89,23 @@ def main():
         config = yaml.safe_load(f)
     print(f"成功加载配置文件: {args.config}")
 
+    # 获取设备配置
+    device = config['run_settings'].get('device', 'cpu')
+    print(f"\n{'='*60}")
+    print(f"全局设备设置: {device.upper()}")
+    print(f"{'='*60}")
+    
+    # 诊断信息：检查 JAX 安装情况
+    import jax
+    print(f"\nJAX 版本: {jax.__version__}")
+    print(f"默认后端: {jax.default_backend()}")
+    try:
+        print(f"所有可用设备: {jax.devices()}")
+        print(f"GPU 设备: {jax.devices('gpu')}")
+    except:
+        print("未检测到 GPU 设备或 JAX GPU 支持未安装")
+    print(f"{'='*60}\n")
+
     os.makedirs("results", exist_ok=True)
 
     robot = DeltaRobot(config['robot_parameters'])
@@ -103,7 +120,8 @@ def main():
 
     elif mode == 'identify':
         cmd_pos, meas_pos = load_measurement_data(paths['identification_data'])
-        identified_params = identify_parameters(robot, cmd_pos, meas_pos, config['stage_one_settings'])
+        identified_params = identify_parameters(robot, cmd_pos, meas_pos, 
+                                               config['stage_one_settings'], device=device)
         np.save(paths['identified_params_output'], identified_params)
         print(f"参数辨识完成，结果已保存至: {paths['identified_params_output']}")
 
@@ -111,10 +129,12 @@ def main():
         identified_params = np.load(paths['identified_params_output'])
         gen_mode = config['stage_two_settings']['generalization_mode']
         if gen_mode == 'meta':
-            compensation_model = generate_meta_compensation_model(robot, identified_params, config)
+            compensation_model = generate_meta_compensation_model(robot, identified_params, 
+                                                                 config, device=device)
             output_path = paths['meta_model_output']
         else:
-            compensation_model = generate_compensation_model(robot, identified_params, config['stage_two_settings'])
+            compensation_model = generate_compensation_model(robot, identified_params, 
+                                                           config['stage_two_settings'], device=device)
             output_path = paths['compensation_model_output']
         with open(output_path, 'wb') as f: pickle.dump(compensation_model, f)
         print(f"补偿模型生成完成，已保存至: {output_path}")

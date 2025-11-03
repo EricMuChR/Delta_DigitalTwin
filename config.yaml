@@ -8,6 +8,8 @@ run_settings:
   # 'identify', 'generalize', 'validate', 'simulate', 'deploy'
   # 'specialize_and_map': (新) 从少量数据一键生成专机误差地图
   mode: "simulate"
+  # 设备选择: 'cpu' 或 'cuda' (GPU)
+  device: "cuda"  # 改为 "cpu" 可切换到CPU模式
 
 # 2. 文件路径设置 (File Paths)
 paths:
